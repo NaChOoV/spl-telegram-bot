@@ -1,0 +1,19 @@
+{
+    "name": "spl-telegram-bot",
+    "module": "index.ts",
+    "type": "module",
+    "private": true,
+    "devDependencies": {
+        "@types/bun": "^1.2.4",
+        "drizzle-kit": "^0.30.5"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@libsql/client": "^0.14.0",
+        "axios": "^1.8.1",
+        "drizzle-orm": "^0.40.0",
+        "telegraf": "^4.16.3"
+    }
+}

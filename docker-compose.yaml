@@ -1,0 +1,15 @@
+services:
+    app-bot:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - db-data:/app/src/db
+
+volumes:
+    db-data:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: ./src/db
