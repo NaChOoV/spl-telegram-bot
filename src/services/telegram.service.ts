@@ -3,6 +3,7 @@ import EnvConfig from '../config/enviroment';
 import { TrackRepository, trackRepository } from '../repository/track.repository';
 import type { NotifyTrack } from '../types/notify-track';
 import type { Message } from 'telegraf/types';
+import { sourceService, type SourceService } from './source.service';
 
 // @ts-ignore
 type CommandContext = Parameters<Parameters<Telegraf['command']>[1]>[0];
@@ -11,13 +12,21 @@ type HelpContext = Parameters<Parameters<Telegraf['help']>[1]>[0];
 // @ts-ignore
 type StartContext = Parameters<Parameters<Telegraf['start']>[1]>[0];
 
+type NotifyResult = {
+    fullFilled: number;
+    rejected: number;
+};
+
 class TelegramService {
     private readonly bot: Telegraf;
     private readonly trackRepository: TrackRepository;
+    private readonly sourceService: SourceService;
 
     constructor() {
         this.bot = new Telegraf(EnvConfig.botToken);
         this.trackRepository = trackRepository;
+        this.sourceService = sourceService;
+
         this.setupCommands();
     }
 
@@ -28,6 +37,7 @@ class TelegramService {
         this.bot.command('track', async (ctx) => await this.track(ctx));
         this.bot.command('untrack', async (ctx) => await this.untrack(ctx));
         this.bot.command('list', async (ctx) => await this.showTracked(ctx));
+        this.bot.command('photo', async (ctx) => await this.showPhoto(ctx));
     }
 
     public launch() {
@@ -42,23 +52,26 @@ class TelegramService {
     }
 
     private help(ctx: HelpContext) {
-        ctx.reply(`
-        /track [RUT] - Agrega un RUT a la lista de seguimiento, ejemplo: /track 12345678-9\n
-        /untrack [RUT] - Elimina un RUT de la lista de seguimiento, ejemplo: /untrack 12345678-9\n
-        /list - Muestra la lista de RUTs en seguimiento\n 
-        `);
+        ctx.reply(
+            'Comandos disponibles:\n\n' +
+                '/track [RUT] - Agrega un RUT a la lista de seguimiento.\nEjemplo: /track 12345678-9\n\n' +
+                '/untrack [RUT] - Elimina un RUT de la lista de seguimiento\nEjemplo: /untrack 12345678-9\n\n' +
+                '/list - Muestra la lista de RUTs en seguimiento.\n\n' +
+                '/photo [RUT] - Muestra la foto de un usuario.\nEjemplo: /photo 12345678-9\n\n'
+        );
     }
 
     private test(ctx: CommandContext) {
         if (!ctx.chat?.id) return;
 
+        console.log('test', ctx.chat.id);
         ctx.reply(String(ctx.chat?.id));
     }
 
     private async track(ctx: CommandContext): Promise<void> {
         if (!ctx.chat?.id) return;
         if (ctx.args.length === 0) {
-            ctx.reply('Debes ingresar RUN, ejemplo: /track 12345678-9');
+            ctx.reply('Debes ingresar RUT!\nEjemplo: /track 12345678-9');
             return;
         }
 
@@ -73,7 +86,7 @@ class TelegramService {
     private async untrack(ctx: CommandContext): Promise<void> {
         if (!ctx.chat?.id) return;
         if (ctx.args.length === 0) {
-            ctx.reply('Debes ingresar RUN, ejemplo: /untrack 12345678-9');
+            ctx.reply('Debes ingresar RUT\nEjemplo: /untrack 12345678-9');
             return;
         }
 
@@ -92,7 +105,7 @@ class TelegramService {
         ctx.reply(response);
     }
 
-    public async notify(tracks: NotifyTrack[]) {
+    public async notify(tracks: NotifyTrack[]): Promise<NotifyResult> {
         const promises = tracks.map<Promise<Message.TextMessage>>((track) => {
             const message = `🚨 ${track.run}\n${track.fullName}\nAcaba de ingresar a ${track.location}`;
 
@@ -100,10 +113,32 @@ class TelegramService {
         });
 
         const response = await Promise.allSettled(promises);
+        const fulfilled = response.filter((res) => res.status === 'fulfilled');
         const rejected = response.filter((res) => res.status === 'rejected');
 
-        // TODO: return chatId of rejectd chats to be deleted
-        console.log('Total rejected:', rejected.length);
+        return {
+            fullFilled: fulfilled.length,
+            rejected: rejected.length,
+        };
+    }
+
+    public async showPhoto(ctx: CommandContext): Promise<void> {
+        if (!ctx.chat?.id) return;
+        const userId = await this.sourceService.getIdByRun(ctx.args[0]);
+
+        if (!userId) {
+            ctx.reply('RUT no encontrado');
+            return;
+        }
+        const cookies = await this.sourceService.login();
+        const user = await this.sourceService.getUserProfile(userId, cookies);
+
+        if (!user.imageUrl) {
+            ctx.reply('Usuario sin foto');
+            return;
+        }
+
+        ctx.replyWithPhoto(user.imageUrl);
     }
 }
 

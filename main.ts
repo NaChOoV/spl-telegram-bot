@@ -31,7 +31,9 @@ socket.addEventListener('message', async (_) => {
             };
         });
 
-        await telegramService.notify(notifyTracks);
+        console.log('Nuevos seguimientos:', notifyTracks.length);
+        const result = await telegramService.notify(notifyTracks);
+        console.log(`FullFilled: ${result.fullFilled}, Rejected: ${result.rejected}`);
     } catch (error) {
         console.log('Error:', error);
     }
