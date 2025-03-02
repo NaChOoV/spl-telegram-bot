@@ -4,9 +4,14 @@ import { migrate } from 'drizzle-orm/libsql/migrator';
 
 import EnvConfig from '../config/enviroment';
 
-const db = drizzle(`file:src/db/${EnvConfig.dbFileName}.sqlite`);
+const db = drizzle({
+    connection: {
+        url: EnvConfig.databaseUrl,
+        authToken: EnvConfig.databaseToken,
+    },
+});
 
-console.log('Migrating database...');
+console.log('Success Database Migration...');
 await migrate(db, { migrationsFolder: './drizzle' });
 
 export default db;

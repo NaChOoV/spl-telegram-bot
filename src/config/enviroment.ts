@@ -1,5 +1,6 @@
 const EnvConfig = {
-    dbFileName: process.env.DB_FILE_NAME || 'mydb',
+    databaseUrl: process.env.TURSO_DATABASE_URL || '',
+    databaseToken: process.env.TURSO_AUTH_TOKEN || '',
     botToken: process.env.BOT_TOKEN || '',
     accessWssUrl: process.env.ACCESS_WSS_URL || '',
     accessBaseUrl: process.env.ACCESS_BASE_URL || '',
