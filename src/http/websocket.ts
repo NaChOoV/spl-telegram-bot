@@ -11,6 +11,8 @@ class AccessWebsocket {
     private readonly trackService: TrackService;
     private readonly accessService: AccessService;
 
+    private socket: WebSocket | null = null;
+
     constructor() {
         this.telegramService = telegramService;
         this.trackService = trackService;
@@ -18,6 +20,20 @@ class AccessWebsocket {
     }
 
     public init() {
+        this.connect();
+    }
+
+    private connect() {
+        if (this.socket) {
+            if (
+                this.socket.readyState === WebSocket.OPEN ||
+                this.socket.readyState === WebSocket.CONNECTING
+            ) {
+                this.socket.close();
+            }
+            this.socket = null;
+        }
+
         const socket = new WebSocket(EnvConfig.accessWssUrl);
         socket.addEventListener('message', (_) => this.handleMessage());
         socket.addEventListener('open', (_) => this.handleOpen());
@@ -55,7 +71,7 @@ class AccessWebsocket {
     }
 
     private handleOpen() {
-        console.log('[WebSocket] Connected to:', EnvConfig.accessWssUrl);
+        if (!this.socket) console.log('[WebSocket] Connected to:', EnvConfig.accessWssUrl);
     }
 
     private handleError(event: Event) {
@@ -63,12 +79,6 @@ class AccessWebsocket {
     }
 
     private async handleClose(event: CloseEvent) {
-        if (event.code === 1006) {
-            this.init();
-            return;
-        }
-        console.log('[WebSocket] Close Event:', event.code);
-
         const secondsLeft = getSleepSeconds(EnvConfig.timeZone);
         if (secondsLeft > 0) {
             console.log(
@@ -79,9 +89,15 @@ class AccessWebsocket {
         }
         await sleep(secondsLeft * 1000);
 
+        if (event.code === 1006) {
+            this.connect();
+            return;
+        }
+
+        console.log('[WebSocket] Close Event:', event.code);
         console.log('[WebSocket] Attempting to reconnect in 10 seconds...');
         await sleep(10 * 1000);
-        this.init();
+        this.connect();
     }
 }
 
