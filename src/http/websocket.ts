@@ -63,8 +63,13 @@ class AccessWebsocket {
     }
 
     private async handleClose(event: CloseEvent) {
-        const secondsLeft = getSleepSeconds(EnvConfig.timeZone);
+        if (event.code === 1006) {
+            this.init();
+            return;
+        }
+        console.log('[WebSocket] Close Event:', event.code);
 
+        const secondsLeft = getSleepSeconds(EnvConfig.timeZone);
         if (secondsLeft > 0) {
             console.log(
                 `[WebSocket] Server close. Reconnecting in ${(secondsLeft / 60 / 60).toFixed(
@@ -74,8 +79,8 @@ class AccessWebsocket {
         }
         await sleep(secondsLeft * 1000);
 
-        console.log('[WebSocket] Attempting to reconnect in 30 seconds...');
-        await sleep(30 * 1000);
+        console.log('[WebSocket] Attempting to reconnect in 10 seconds...');
+        await sleep(10 * 1000);
         this.init();
     }
 }
