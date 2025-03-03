@@ -38,13 +38,15 @@ class TelegramService {
         this.bot.command('untrack', async (ctx) => await this.untrack(ctx));
         this.bot.command('list', async (ctx) => await this.showTracked(ctx));
         this.bot.command('photo', async (ctx) => await this.showPhoto(ctx));
+        this.bot.command('block', async (ctx) => await this.block(ctx));
+        this.bot.command('unblock', async (ctx) => await this.unBlock(ctx));
     }
 
     public launch() {
         this.bot.launch();
         process.once('SIGINT', () => this.bot.stop('SIGINT'));
         process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
-        console.log('Bot is running');
+        console.log('[TelegramService] Bot is running');
     }
 
     private start(ctx: StartContext) {
@@ -57,7 +59,9 @@ class TelegramService {
                 '/track [RUT] - Agrega un RUT a la lista de seguimiento.\nEjemplo: /track 12345678-9\n\n' +
                 '/untrack [RUT] - Elimina un RUT de la lista de seguimiento\nEjemplo: /untrack 12345678-9\n\n' +
                 '/list - Muestra la lista de RUTs en seguimiento.\n\n' +
-                '/photo [RUT] - Muestra la foto de un usuario.\nEjemplo: /photo 12345678-9\n\n'
+                '/photo [RUT] - Muestra la foto de un usuario.\nEjemplo: /photo 12345678-9\n\n' +
+                '/block [RUT] - Bloquea un usuario.\nEjemplo: /block 12345678-9\n\n' +
+                '/unblock [RUT] - Desbloquea un usuario.\nEjemplo: /unblock 12345678-9\n\n'
         );
     }
 
@@ -72,6 +76,12 @@ class TelegramService {
         if (!ctx.chat?.id) return;
         if (ctx.args.length === 0) {
             ctx.reply('Debes ingresar RUT!\nEjemplo: /track 12345678-9');
+            return;
+        }
+
+        const userId = await this.sourceService.getIdByRun(ctx.args[0]);
+        if (!userId) {
+            ctx.reply('RUT no existe');
             return;
         }
 
@@ -139,6 +149,45 @@ class TelegramService {
         }
 
         ctx.replyWithPhoto(user.imageUrl);
+    }
+
+    private async block(ctx: CommandContext): Promise<void> {
+        if (!ctx.chat?.id) return;
+        if (ctx.args.length === 0) {
+            ctx.reply('Debes ingresar RUT\nEjemplo: /block 12345678-9');
+            return;
+        }
+
+        const run = ctx.args[0];
+        const userId = await this.sourceService.getIdByRun(run);
+        if (!userId) {
+            ctx.reply('RUT no encontrado');
+            return;
+        }
+
+        const cookies = await this.sourceService.login();
+        await this.sourceService.blockUser(userId, cookies);
+
+        ctx.reply('✅ Usuario bloqueado');
+    }
+
+    private async unBlock(ctx: CommandContext): Promise<void> {
+        if (!ctx.chat?.id) return;
+        if (ctx.args.length === 0) {
+            ctx.reply('Debes ingresar RUT\nEjemplo: /unblock 12345678-9');
+            return;
+        }
+        const run = ctx.args[0];
+        const userId = await this.sourceService.getIdByRun(run);
+        if (!userId) {
+            ctx.reply('RUT no encontrado');
+            return;
+        }
+
+        const cookies = await this.sourceService.login();
+        await this.sourceService.unBlockUser(userId, cookies);
+
+        ctx.reply('✅ Usuario desbloqueado');
     }
 }
 

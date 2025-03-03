@@ -1,4 +1,5 @@
 const EnvConfig = {
+    timeZone: process.env.TIME_ZONE || 'GMT-3',
     databaseUrl: process.env.TURSO_DATABASE_URL || '',
     databaseToken: process.env.TURSO_AUTH_TOKEN || '',
     botToken: process.env.BOT_TOKEN || '',

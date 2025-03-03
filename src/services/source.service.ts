@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios';
 import EnvConfig from '../config/enviroment';
 
 import * as cheerio from 'cheerio';
-import type { User } from '../types/User';
+import { AccessType, State, type User } from '../types/User';
 
 class SourceService {
     private readonly httpService: AxiosInstance;
@@ -99,6 +99,44 @@ class SourceService {
         }
 
         return { imageUrl: image };
+    }
+
+    async blockUser(userId: string, cookies: string[]): Promise<void> {
+        const headers = {
+            'user-agent': '',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            cookie: cookies.join('; '),
+        };
+
+        const formData = {
+            QUERY: 'EDITARPERFIL',
+            IDCONTACTO: userId,
+            DATOSFORM: `ESTADO=${State.INACTIVO}&CONTACTOCAMPO14=${AccessType.QR}`,
+        };
+        const formDataURLEncoded = new URLSearchParams(formData).toString();
+
+        await this.httpService.post('/main_servidor.php', formDataURLEncoded, {
+            headers,
+        });
+    }
+
+    async unBlockUser(userId: string, cookies: string[]): Promise<void> {
+        const headers = {
+            'user-agent': '',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            cookie: cookies.join('; '),
+        };
+
+        const formData = {
+            QUERY: 'EDITARPERFIL',
+            IDCONTACTO: userId,
+            DATOSFORM: `ESTADO=${State.ACTIVO}&CONTACTOCAMPO14=${AccessType.BIOMETRIA}`,
+        };
+        const formDataURLEncoded = new URLSearchParams(formData).toString();
+
+        await this.httpService.post('/main_servidor.php', formDataURLEncoded, {
+            headers,
+        });
     }
 }
 const sourceService = new SourceService();

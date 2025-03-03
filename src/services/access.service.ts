@@ -24,4 +24,4 @@ class AccessService {
 
 const accessService = new AccessService();
 
-export default accessService;
+export { accessService, AccessService };
