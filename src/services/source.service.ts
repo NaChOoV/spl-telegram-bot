@@ -2,7 +2,8 @@ import axios, { type AxiosInstance } from 'axios';
 import EnvConfig from '../config/enviroment';
 
 import * as cheerio from 'cheerio';
-import { AccessType, State, type User } from '../types/User';
+import type { Access } from '../types/access';
+import { AccessType, State, type AbmUser, type User } from '../types/User';
 
 class SourceService {
     private readonly httpService: AxiosInstance;
@@ -42,7 +43,7 @@ class SourceService {
         return cookies;
     }
 
-    async getIdByRun(run: string): Promise<string | undefined> {
+    async getAbmUserByRun(run: string): Promise<AbmUser | undefined> {
         const response = await this.httpService.get(`/abm/abm_socios.php?CONTACTOCAMPO7=${run}`);
         const html = response.data;
 
@@ -69,7 +70,13 @@ class SourceService {
             users.push(user);
         });
 
-        return users.length != 0 && users[0].id;
+        if (users.length === 0) return;
+        return {
+            userId: users[0].id,
+            run: users[0].rut,
+            firstName: users[0].nombre,
+            lastName: users[0].apellido,
+        };
     }
 
     async getUserProfile(userId: string, cookies: string[]): Promise<User> {
@@ -137,6 +144,41 @@ class SourceService {
         await this.httpService.post('/main_servidor.php', formDataURLEncoded, {
             headers,
         });
+    }
+
+    async getLastEntryByUserId(userIds: string[]): Promise<Access[]> {
+        const result = userIds.map((id) => `'${id}'`).join(', ');
+        const query = `
+        -1 /*!12345UNION*/ /*!12345 SELECT*/ 1, CAST((
+        /*!12345 SELECT GROUP_CONCAT(CONCAT*/('{"userId": "', CONTACTOID, '", "entryAt": "', MARCAINGRESO,'", "sedeId": "', SEDEID,'"}') SEPARATOR ', ')
+        FROM (
+            /*!12345 SELECT */ a.CONTACTOID, a.MARCAINGRESO, a.SEDEID
+            FROM accesos a
+            LEFT JOIN accesos b
+            ON a.CONTACTOID = b.CONTACTOID AND a.MARCAINGRESO < b.MARCAINGRESO
+            WHERE a.CONTACTOID IN (${result}) AND DATE(a.MARCAINGRESO) = CURDATE()
+            GROUP BY a.CONTACTOID, a.MARCAINGRESO
+            HAVING COUNT(b.MARCAINGRESO) = 0
+        ) t
+        ) AS /*!12345 CHAR*/ ) COLLATE utf8_general_ci, 3, 4, 5, 6, 7, 8, 9, 10, 11
+        `;
+
+        const encodedQuery = encodeURIComponent(query);
+
+        const response = await this.httpService.get(
+            `/abm/abm_sedes.php?EDITARID=${encodedQuery}`,
+            {}
+        );
+
+        const html = response.data;
+
+        // Load the HTML into cheerio
+        const $ = cheerio.load(html);
+
+        const stringValue = $('input[name="NOMBRE"]').attr('value');
+        if (!stringValue) return [];
+
+        return JSON.parse(`[${stringValue}]`);
     }
 }
 const sourceService = new SourceService();

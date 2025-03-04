@@ -1,0 +1,1 @@
+ALTER TABLE `track` ADD `type` text DEFAULT '1' NOT NULL;

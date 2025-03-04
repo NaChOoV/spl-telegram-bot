@@ -35,40 +35,40 @@ class AccessWebsocket {
         }
 
         const socket = new WebSocket(EnvConfig.accessWssUrl);
-        socket.addEventListener('message', (_) => this.handleMessage());
+        //socket.addEventListener('message', (_) => this.handleMessage());
         socket.addEventListener('open', (_) => this.handleOpen());
         socket.addEventListener('error', (event) => this.handleError(event));
         socket.addEventListener('close', async (event) => await this.handleClose(event));
     }
 
-    private async handleMessage() {
-        try {
-            const accesses = await this.accessService.getAccess();
-            if (accesses.data.length === 0) return;
+    // private async handleMessage() {
+    //     try {
+    //         const accesses = await this.accessService.getAccess();
+    //         if (accesses.data.length === 0) return;
 
-            const tracksToNotify = await this.trackService.checkTracks(accesses.data);
-            if (tracksToNotify.length === 0) return;
+    //         const tracksToNotify = await this.trackService.checkTracks(accesses.data);
+    //         if (tracksToNotify.length === 0) return;
 
-            // @ts-ignore
-            const notifyTracks = tracksToNotify.map<NotifyTrack>((track) => {
-                const access = accesses.data.find((access) => access.run === track.run);
-                if (!access) return;
+    //         // @ts-ignore
+    //         const notifyTracks = tracksToNotify.map<NotifyTrack>((track) => {
+    //             const access = accesses.data.find((access) => access.run === track.run);
+    //             if (!access) return;
 
-                return {
-                    chatId: track.chatId,
-                    run: track.run,
-                    location: getLocation(access.location),
-                    fullName: access.fullName,
-                };
-            });
+    //             return {
+    //                 chatId: track.chatId,
+    //                 run: track.run,
+    //                 location: getLocation(access.location),
+    //                 fullName: access.fullName,
+    //             };
+    //         });
 
-            console.log('Nuevos seguimientos:', notifyTracks.length);
-            const result = await this.telegramService.notify(notifyTracks);
-            console.log(`FullFilled: ${result.fullFilled}, Rejected: ${result.rejected}`);
-        } catch (error) {
-            console.log('[WebSocket] Message Error:', error);
-        }
-    }
+    //         console.log('Nuevos seguimientos:', notifyTracks.length);
+    //         const result = await this.telegramService.notify(notifyTracks);
+    //         console.log(`FullFilled: ${result.fullFilled}, Rejected: ${result.rejected}`);
+    //     } catch (error) {
+    //         console.log('[WebSocket] Message Error:', error);
+    //     }
+    // }
 
     private handleOpen() {
         if (!this.socket) console.log('[WebSocket] Connected to:', EnvConfig.accessWssUrl);

@@ -4,6 +4,7 @@ import { TrackRepository, trackRepository } from '../repository/track.repository
 import type { NotifyTrack } from '../types/notify-track';
 import type { Message } from 'telegraf/types';
 import { sourceService, type SourceService } from './source.service';
+import { TrackType } from '../db/schema';
 
 // @ts-ignore
 type CommandContext = Parameters<Parameters<Telegraf['command']>[1]>[0];
@@ -79,16 +80,23 @@ class TelegramService {
             return;
         }
 
-        const userId = await this.sourceService.getIdByRun(ctx.args[0]);
-        if (!userId) {
+        const abmUser = await this.sourceService.getAbmUserByRun(ctx.args[0]);
+        if (!abmUser) {
             ctx.reply('RUT no existe');
             return;
         }
 
+        const user = await this.sourceService.getLastEntryByUserId([abmUser.userId]);
+        const lastEntry = user[0] ? user[0].entryAt : undefined;
         const chatId = ctx.chat.id;
-        const run = ctx.args[0];
-
-        await this.trackRepository.createTrack(chatId, run);
+        await this.trackRepository.createTrack(
+            chatId,
+            abmUser.userId,
+            abmUser.run,
+            `${abmUser.firstName} ${abmUser.lastName}`,
+            TrackType.TRACK,
+            lastEntry
+        );
 
         ctx.reply('✅ Agregado correctamente');
     }
@@ -102,14 +110,14 @@ class TelegramService {
 
         const chatId = ctx.chat.id;
         const run = ctx.args[0];
-        await this.trackRepository.removeTrack(chatId, run);
+        await this.trackRepository.removeTrack(chatId, run, TrackType.TRACK);
 
         ctx.reply('✅ Removido correctamente');
     }
 
     private async showTracked(ctx: CommandContext): Promise<void> {
         if (!ctx.chat?.id) return;
-        const track = await this.trackRepository.listTrack(ctx.chat.id);
+        const track = await this.trackRepository.listTrack(ctx.chat.id, TrackType.TRACK);
 
         const response = `📋 Listado\n\n${track.map((t) => t.run).join('\n')}`;
         ctx.reply(response);
@@ -134,14 +142,14 @@ class TelegramService {
 
     public async showPhoto(ctx: CommandContext): Promise<void> {
         if (!ctx.chat?.id) return;
-        const userId = await this.sourceService.getIdByRun(ctx.args[0]);
+        const abmUser = await this.sourceService.getAbmUserByRun(ctx.args[0]);
 
-        if (!userId) {
+        if (!abmUser) {
             ctx.reply('RUT no encontrado');
             return;
         }
         const cookies = await this.sourceService.login();
-        const user = await this.sourceService.getUserProfile(userId, cookies);
+        const user = await this.sourceService.getUserProfile(abmUser.userId, cookies);
 
         if (!user.imageUrl) {
             ctx.reply('Usuario sin foto');
@@ -157,16 +165,24 @@ class TelegramService {
             ctx.reply('Debes ingresar RUT\nEjemplo: /block 12345678-9');
             return;
         }
-
+        console.log(ctx.args[0]);
         const run = ctx.args[0];
-        const userId = await this.sourceService.getIdByRun(run);
-        if (!userId) {
+        const abmUser = await this.sourceService.getAbmUserByRun(run);
+        if (!abmUser) {
             ctx.reply('RUT no encontrado');
             return;
         }
 
         const cookies = await this.sourceService.login();
-        await this.sourceService.blockUser(userId, cookies);
+        await this.sourceService.blockUser(abmUser.userId, cookies);
+
+        await this.trackRepository.createTrack(
+            ctx.chat.id,
+            abmUser.userId,
+            abmUser.run,
+            `${abmUser.firstName} ${abmUser.lastName}`,
+            TrackType.DELETE
+        );
 
         ctx.reply('✅ Usuario bloqueado');
     }
@@ -178,15 +194,16 @@ class TelegramService {
             return;
         }
         const run = ctx.args[0];
-        const userId = await this.sourceService.getIdByRun(run);
-        if (!userId) {
+        const abmUser = await this.sourceService.getAbmUserByRun(run);
+        if (!abmUser) {
             ctx.reply('RUT no encontrado');
             return;
         }
 
         const cookies = await this.sourceService.login();
-        await this.sourceService.unBlockUser(userId, cookies);
+        await this.sourceService.unBlockUser(abmUser.userId, cookies);
 
+        await this.trackRepository.removeTrack(ctx.chat?.id, run, TrackType.DELETE);
         ctx.reply('✅ Usuario desbloqueado');
     }
 }

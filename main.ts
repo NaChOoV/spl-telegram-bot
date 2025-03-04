@@ -1,7 +1,7 @@
-import AccessWebsocket from './src/http/websocket';
+import CronJobService from './src/services/cron.service';
 import { telegramService } from './src/services/telegram.service';
-
-const accessWebsocket = new AccessWebsocket();
 // SETUP
 telegramService.launch();
-accessWebsocket.init();
+
+const cronjobService = new CronJobService();
+await cronjobService.setup();

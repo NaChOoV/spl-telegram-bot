@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import EnvConfig from '../config/enviroment';
-import type { Access } from '../types/access';
+import type { Access1 } from '../types/access';
 import type { ResponseData } from '../types/shared';
 
 class AccessService {
@@ -13,8 +13,8 @@ class AccessService {
         });
     }
 
-    public async getAccess(): Promise<ResponseData<Access>> {
-        const response = await this.httpService.get<ResponseData<Access>>('/access/complete', {
+    public async getAccess(): Promise<ResponseData<Access1>> {
+        const response = await this.httpService.get<ResponseData<Access1>>('/access/complete', {
             headers: { 'X-Auth-Token': EnvConfig.accessAuthString },
         });
 
