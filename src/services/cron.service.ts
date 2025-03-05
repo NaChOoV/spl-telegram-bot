@@ -8,7 +8,7 @@ import { getLocation } from '../utils/location';
 import { TrackType } from '../db/schema';
 import { getSleepSeconds } from '../utils/sleep-time';
 import EnvConfig from '../config/enviroment';
-import { sleep, sleepSync } from 'bun';
+import { sleep } from 'bun';
 
 class CronJobService {
     private readonly telegramService: TelegramService;
