@@ -3,7 +3,7 @@ import EnvConfig from '../config/enviroment';
 
 import * as cheerio from 'cheerio';
 import type { Access } from '../types/access';
-import { AccessType, State, type AbmUser, type User } from '../types/User';
+import { AccessType, State, type AbmUser, type User } from '../types/user';
 
 class SourceService {
     private readonly httpService: AxiosInstance;
