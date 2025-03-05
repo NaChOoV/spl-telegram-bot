@@ -6,6 +6,9 @@ import { extractUnique } from '../utils/utility';
 import type { NotifyTrack } from '../types/notify-track';
 import { getLocation } from '../utils/location';
 import { TrackType } from '../db/schema';
+import { getSleepSeconds } from '../utils/sleep-time';
+import EnvConfig from '../config/enviroment';
+import { sleep, sleepSync } from 'bun';
 
 class CronJobService {
     private readonly telegramService: TelegramService;
@@ -29,6 +32,7 @@ class CronJobService {
     }
 
     public async checkAccess() {
+        await this.checkSleepTime(this.checkAccess.name);
         // consultar la bd
         const tracks = await trackRepository.getAll(TrackType.TRACK);
 
@@ -69,6 +73,16 @@ class CronJobService {
         console.log(`FullFilled: ${result.fullFilled}, Rejected: ${result.rejected}`);
     }
     private checkFailedAccess() {}
+
+    private async checkSleepTime(name: string) {
+        const secondsLeft = getSleepSeconds(EnvConfig.timeZone);
+        if (secondsLeft > 0) {
+            const hours = (secondsLeft / 60 / 60).toFixed(1);
+            console.log(`[CronJobService] Cron: ${name} paused for ${hours} hours.`);
+        }
+
+        await sleep(secondsLeft * 1000);
+    }
 }
 
 export default CronJobService;
