@@ -165,7 +165,6 @@ class TelegramService {
             ctx.reply('Debes ingresar RUT\nEjemplo: /block 12345678-9');
             return;
         }
-        console.log(ctx.args[0]);
         const run = ctx.args[0];
         const abmUser = await this.sourceService.getAbmUserByRun(run);
         if (!abmUser) {
